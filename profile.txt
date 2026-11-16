@@ -22,5 +22,5 @@ about2=At itmX GmbH he designs and maintains Power BI semantic models connected 
 about3=He is currently helping build a Medallion architecture in Microsoft Fabric to make company reporting scalable and reliable.
 about4=His interests lie where data engineering meets agentic AI: turning raw business data into decisions people can act on.
 
-phone=0157 37642152
+phone=
 location=Pforzheim, Germany
