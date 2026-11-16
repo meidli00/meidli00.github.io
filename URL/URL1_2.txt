@@ -1,0 +1,2 @@
+MediaPipe Tasks - Face Landmarker (live webcam, 478 face landmarks)
+https://google-ai-edge.github.io/mediapipe-samples-web/#/vision/face_landmarker
