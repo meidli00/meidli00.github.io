@@ -4,24 +4,23 @@
 # Lines starting with # are comments and are ignored.
 # ============================================================
 
-name=Prof. Pin Luarn
+name=Felix Meidlinger
 
-title1=Top 2% Scientist Worldwide (2020-2026)
+title1=Master Student @ Pforzheim University Business School
 
-title2=2024 National Teaching Award Laureate
+title2=Business Intelligence & Power BI Developer @ itmX GmbH
 
-expertise=Internet Marketing, AI Applications, Agentic AI
+expertise=Power BI, Data Modeling, Microsoft Fabric, Agentic AI
 
-education=Ph.D. in Industrial Engineering, University of Wisconsin-Madison, USA
+education=Master's Program, Pforzheim University Business School, Germany (in progress)
 
-email=luarn@mail.ntust.edu.tw
-linkedin=https://pse.is/8nn88y
+email=meidling@hs-pforzheim.de
+linkedin=https://www.linkedin.com/in/felix-meidlinger-457a14224/
 
-about1=Prof. Luarn earned his B.S. in Industrial Engineering from Tunghai University,
-about2=and his M.S. and Ph.D. in Industrial Engineering from the University of Wisconsin-Madison.
-about3=Named among the world's top 2% scientists by Stanford University & Elsevier for seven consecutive years (2020-2026).
-about4=Recipient of the 2024 Presidential National Teaching Award, Taiwan
+about1=Felix is a Master's student at Pforzheim University Business School, focusing on data analytics and AI applications.
+about2=At itmX GmbH he designs and maintains Power BI semantic models connected to Azure SQL, SharePoint and APIs such as Exact Online.
+about3=He is currently helping build a Medallion architecture in Microsoft Fabric to make company reporting scalable and reliable.
+about4=His interests lie where data engineering meets agentic AI: turning raw business data into decisions people can act on.
 
-phone=+886-2-2737-6754
-
-location=T2-409, National Taiwan University of Science and Technology, No. 43, Sec. 4, Keelung Rd., Taipei, Taiwan
+phone=0157 37642152
+location=Pforzheim, Germany
