@@ -1,0 +1,2 @@
+Teachable Machine - own image model with 4 classes (glasses box, phone, bottle, empty)
+https://teachablemachine.withgoogle.com/train
