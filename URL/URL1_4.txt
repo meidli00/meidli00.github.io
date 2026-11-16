@@ -1,0 +1,2 @@
+Antigravity: local object recognition app (Python + Flask + MediaPipe EfficientDet-Lite0) - detects cat 78% and dog 76%
+https://antigravity.google/
