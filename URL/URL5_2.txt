@@ -1,2 +1,0 @@
-ChatGPT multi-agent scheduled task
-https://drluarn.github.io/

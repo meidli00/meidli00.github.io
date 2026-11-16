@@ -1,2 +1,0 @@
-Teachable Machine Object Classifier
-https://drluarn.github.io/

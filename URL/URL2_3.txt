@@ -1,2 +1,0 @@
-Pose landmark detection
-https://drluarn.github.io/

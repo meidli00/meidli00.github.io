@@ -1,2 +1,0 @@
-Object recognition
-https://drluarn.github.io/

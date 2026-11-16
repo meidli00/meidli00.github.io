@@ -1,2 +1,0 @@
-Face detection
-https://drluarn.github.io/
