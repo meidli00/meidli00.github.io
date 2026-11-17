@@ -1,0 +1,2 @@
+Claude Code: MediaPipe Face Mesh (478 3D landmarks, 2 faces) - switchable mesh/contours/points styles, color themes and black background
+https://ai.google.dev/edge/mediapipe/solutions/vision/face_landmarker
