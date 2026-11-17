@@ -1,0 +1,2 @@
+Claude Code: Teachable Machine real-time object classifier in the Flask web app - my own 4-class image model (Cap, Phone, Blank, ...) running live on the webcam with TensorFlow.js
+https://teachablemachine.withgoogle.com/
