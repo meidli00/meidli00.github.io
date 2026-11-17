@@ -1,0 +1,2 @@
+Claude Code: MediaPipe selfie segmentation as video-conference virtual background - keys 1-4 landscape photos, 0/r/w/y/g solid colors, b blur (stronger each press)
+https://ai.google.dev/edge/mediapipe/solutions/vision/image_segmenter
