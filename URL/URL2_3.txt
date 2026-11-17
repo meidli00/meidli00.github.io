@@ -1,0 +1,2 @@
+Claude Code: MediaPipe Pose fitness coach in the Flask web app - counts arm curls (straight -> bent -> straight) separately for left and right arm with live elbow angles
+https://ai.google.dev/edge/mediapipe/solutions/vision/pose_landmarker
