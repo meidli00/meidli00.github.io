@@ -1,0 +1,2 @@
+Claude Code: Face Mesh on video (slide demo clip) inside the Flask web app - live switchable mesh/points styles, color themes and black background
+https://ai.google.dev/edge/mediapipe/solutions/vision/face_landmarker
