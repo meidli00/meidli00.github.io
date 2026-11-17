@@ -1,0 +1,2 @@
+Extra Credit: single-file HTML Air Drawing demo (321705) - MediaPipe Hand Landmarker via jsdelivr, right index finger paints neon strokes, pinch = next color, open palm = clear, left hand spread = brush size
+https://meidli00.github.io/mediapipeCC.html
