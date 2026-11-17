@@ -1,0 +1,2 @@
+Claude Code: MediaPipe Gesture Recognizer for two hands in real time - gesture + confidence per hand (Victory, Thumb Up, Open Palm, Fist, Pointing Up, I Love You) with color-coded finger landmarks
+https://ai.google.dev/edge/mediapipe/solutions/vision/gesture_recognizer
