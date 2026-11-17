@@ -1,0 +1,2 @@
+Claude Code: MediaPipe Face Detector (BlazeFace) - 6 keypoints as geometric shapes: eyes as concentric circles, nose/mouth/ears random eye-sized shapes, any key reshuffles
+https://ai.google.dev/edge/mediapipe/solutions/vision/face_detector
