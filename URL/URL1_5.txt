@@ -1,0 +1,2 @@
+Antigravity: video object recognition (YouTube & local MP4) - live MediaPipe detection of cars, persons, motorcycles
+https://antigravity.google/
