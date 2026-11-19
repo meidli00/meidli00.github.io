@@ -1,0 +1,2 @@
+Claude Code: Neural Style Transfer tab in the Flask web app - AdaIN arbitrary style transfer (VGG-19 encoder + decoder, ONNX Runtime) turns an uploaded photo and a webcam photo into 6 painting styles (Van Gogh, Hokusai, Munch, Kandinsky, Monet, Mondrian)
+https://arxiv.org/abs/1703.06868
