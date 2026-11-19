@@ -1,0 +1,2 @@
+Gemini Canvas + Nano Banana: my own "Wardrobe Stylist" web app - upload a photo of myself and clothing items (blazer, shirt, jeans, sneakers), one click generates me wearing the outfit
+https://gemini.google.com/app
