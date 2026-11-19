@@ -1,2 +1,2 @@
-Claude Code: Ollama tab in the Flask web app - local LLM gemma3:1b running offline on my Mac (no token costs), answering the slide prompt as Prof. Luarn's assistant
-https://ollama.com/
+Claude Code: Ollama tab in the Flask web app - local multimodal model gemma3:4b recognizes an uploaded photo of Pforzheim (offline, 0 token cost); plus gemma3:1b answering the slide prompt
+https://ollama.com/library/gemma3
