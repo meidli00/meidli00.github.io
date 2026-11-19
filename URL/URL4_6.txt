@@ -1,0 +1,2 @@
+Gemini Skills-2: skill "weekly-report" created by description - analyzes my Google Sheet of smart-glasses sales, compares Week 46 with Week 45, builds a dashboard with charts and writes the sales team email
+https://gemini.google.com/customize/skills
