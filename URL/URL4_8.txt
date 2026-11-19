@@ -1,0 +1,2 @@
+Extra credit: my own Gemini skill "lecture-recap" - turns any lecture deck into a study pack (5-point summary, glossary, 8 flashcards, 5-question quiz with answer key, 3 practice tasks), tested on the Unit 4 slides; saves me ~30 min of exam prep per lecture
+https://gemini.google.com/customize/skills
