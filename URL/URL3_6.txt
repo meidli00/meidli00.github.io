@@ -1,0 +1,2 @@
+Claude Code (extra credit): CCTV-only traffic analytics with YOLO26n in the browser - vehicle tracking, line-crossing counts per direction and type, movement heatmap and speed estimation on the live Keelung CCTV
+https://cctv.klcg.gov.tw/facd4662
