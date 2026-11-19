@@ -1,0 +1,2 @@
+Claude Code: Ultralytics YOLO26n in the browser (ONNX + WebGPU) - live object detection on webcam, the Keelung live CCTV feed (all classes / vehicles only) and an NBA YouTube highlight video
+https://docs.ultralytics.com/
