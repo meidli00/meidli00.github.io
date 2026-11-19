@@ -1,0 +1,2 @@
+Claude Code: Ollama tab in the Flask web app - local LLM gemma3:1b running offline on my Mac (no token costs), answering the slide prompt as Prof. Luarn's assistant
+https://ollama.com/
