@@ -1,0 +1,936 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Pforzheim AI Course Islands</title>
+<meta name="description" content="Interactive 3D map of the Pforzheim AI course: six floating islands, one per unit.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800&display=swap" rel="stylesheet">
+<!-- Three.js r128 + OrbitControls (classic script builds, no build step needed) -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+<style>
+/* =====================================================================
+   1. DESIGN TOKENS  (change colours here)
+   ===================================================================== */
+:root {
+  --sky-top: #c9d8ff;
+  --sky-mid: #e9ddff;
+  --sky-low: #ffe6ef;
+  --ink: #23263a;            /* main text */
+  --ink-soft: #5b6078;       /* secondary text */
+  --accent: #6c5ce7;         /* buttons, focus rings */
+  --accent-soft: #ece9ff;
+  --ok: #2f9e6e;
+  --warn: #c2571a;
+  --card: rgba(255, 255, 255, 0.94);
+  --card-border: rgba(108, 92, 231, 0.18);
+  --shadow: 0 18px 40px rgba(60, 50, 140, 0.16), 0 3px 10px rgba(30, 30, 60, 0.06);
+  --radius: 20px;
+  --font: "Nunito", "Segoe UI Rounded", "SF Pro Rounded", system-ui, -apple-system, sans-serif;
+  --fs: 16px;
+  --lh: 1.55;
+  --ls: 0px;
+  --panel-w: min(440px, 92vw);
+}
+/* Low-stimulation mode: flat calm colours, larger and more spaced text */
+body.low-stim {
+  --sky-top: #eef0f3; --sky-mid: #eef0f3; --sky-low: #eef0f3;
+  --accent: #4f5b8a; --accent-soft: #e6e9f2;
+  --card: #ffffff;
+  --shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+  --fs: 17.5px; --lh: 1.75; --ls: 0.2px;
+}
+
+/* =====================================================================
+   2. BASE LAYOUT
+   ===================================================================== */
+* { box-sizing: border-box; }
+html, body { margin: 0; height: 100%; overflow: hidden; }
+body {
+  font-family: var(--font); font-size: var(--fs); line-height: var(--lh); letter-spacing: var(--ls);
+  color: var(--ink);
+  background: linear-gradient(180deg, var(--sky-top) 0%, var(--sky-mid) 55%, var(--sky-low) 100%);
+  background-color: var(--sky-mid);
+}
+button, input, textarea, select { font: inherit; letter-spacing: inherit; color: inherit; }
+:focus-visible { outline: 3px solid var(--accent); outline-offset: 3px; border-radius: 10px; }
+.sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+
+#scene { position: fixed; inset: 0; }
+#scene canvas { display: block; touch-action: none; }
+
+/* ---------- top bar ---------- */
+header {
+  position: fixed; top: 0; left: 0; right: 0; z-index: 20;
+  display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px;
+  padding: 14px 18px; pointer-events: none;
+}
+header > * { pointer-events: auto; }
+.brand { display: flex; align-items: baseline; flex-wrap: wrap; gap: 4px 10px;
+  background: var(--card); padding: 10px 18px; border-radius: 999px; box-shadow: var(--shadow); border: 1px solid var(--card-border); }
+.brand h1 { margin: 0; font-size: clamp(17px, 2.4vw, 23px); font-weight: 800; letter-spacing: -0.2px; }
+.brand .by { font-size: 0.82em; font-weight: 600; color: var(--ink-soft); opacity: 0.85; }
+.tools { display: flex; flex-wrap: wrap; align-items: center; gap: 8px;
+  background: var(--card); padding: 8px 10px; border-radius: 999px; box-shadow: var(--shadow); border: 1px solid var(--card-border); }
+.pill-btn { border: 1.5px solid var(--card-border); background: #fff; border-radius: 999px; padding: 7px 14px; cursor: pointer;
+  font-weight: 700; font-size: 0.92em; display: inline-flex; align-items: center; gap: 6px; transition: background .25s, border-color .25s; }
+.pill-btn:hover { background: var(--accent-soft); }
+.pill-btn[aria-pressed="true"] { background: var(--accent); color: #fff; border-color: var(--accent); }
+.pill-btn:disabled { opacity: .45; cursor: not-allowed; }
+.vol { display: inline-flex; align-items: center; gap: 6px; font-size: 0.85em; color: var(--ink-soft); font-weight: 700; }
+.vol input { width: 90px; accent-color: var(--accent); }
+
+/* ---------- island labels (real buttons → Tab / Enter work) ---------- */
+#labels { position: fixed; inset: 0; pointer-events: none; z-index: 10; }
+.island-label {
+  position: absolute; left: 0; top: 0; pointer-events: auto; cursor: pointer;
+  transform: translate(-50%, -100%); white-space: nowrap;
+  border: 2px solid rgba(255, 255, 255, 0.9); background: rgba(255, 255, 255, 0.92); color: var(--ink);
+  border-radius: 999px; padding: 4px 12px 4px 5px; font-weight: 800; font-size: 0.9em; box-shadow: var(--shadow);
+  display: inline-flex; align-items: center; gap: 7px; transition: background .3s, box-shadow .3s;
+}
+.island-label .letter { width: 26px; height: 26px; border-radius: 50%; display: grid; place-items: center; color: #fff; font-size: 0.95em; }
+.island-label .unit { font-weight: 700; color: var(--ink-soft); font-size: 0.86em; }
+.island-label.hot { box-shadow: 0 0 0 4px rgba(108, 92, 231, 0.28), var(--shadow); background: #fff; }
+.island-label.hidden { visibility: hidden; }
+
+/* ---------- content panel ---------- */
+#panel {
+  position: fixed; z-index: 30; top: 76px; right: 16px; bottom: 16px; width: var(--panel-w);
+  background: var(--card); border: 1px solid var(--card-border); border-radius: var(--radius); box-shadow: var(--shadow);
+  display: flex; flex-direction: column; transform: translateX(calc(100% + 30px)); transition: transform .45s cubic-bezier(.2, .8, .2, 1);
+  visibility: hidden;
+}
+#panel.open { transform: none; visibility: visible; }
+body.low-stim #panel { transition: none; }
+.panel-head { padding: 18px 20px 10px; border-bottom: 1px solid var(--card-border); display: flex; gap: 12px; align-items: flex-start; }
+.panel-badge { flex: none; width: 46px; height: 46px; border-radius: 14px; display: grid; place-items: center; color: #fff; font-weight: 800; font-size: 22px; }
+.panel-head h2 { margin: 0; font-size: 1.2em; line-height: 1.25; }
+.panel-head .kicker { font-size: 0.8em; font-weight: 800; color: var(--accent); text-transform: uppercase; letter-spacing: 0.06em; }
+.panel-body { padding: 14px 20px 20px; overflow-y: auto; flex: 1; }
+.panel-body h3 { font-size: 1em; margin: 18px 0 8px; }
+.lessons { list-style: none; padding: 0; margin: 0; display: grid; gap: 8px; }
+.lessons li { background: var(--accent-soft); border-radius: 12px; padding: 8px 12px; }
+.lessons b { display: block; font-size: 0.95em; }
+.lessons span { color: var(--ink-soft); font-size: 0.9em; }
+.panel-foot { padding: 12px 20px; border-top: 1px solid var(--card-border); display: flex; gap: 8px; justify-content: space-between; flex-wrap: wrap; }
+.btn { border: none; border-radius: 12px; padding: 9px 16px; font-weight: 800; cursor: pointer; background: var(--accent); color: #fff; }
+.btn.ghost { background: var(--accent-soft); color: var(--ink); }
+.btn:disabled { opacity: .5; cursor: not-allowed; }
+
+/* ---------- activities ---------- */
+.activity { border: 2px dashed var(--card-border); border-radius: 16px; padding: 12px 14px; margin-top: 6px; }
+.activity p { margin: 0 0 10px; }
+.chips { display: flex; flex-wrap: wrap; gap: 8px; }
+.chip { border: 1.5px solid var(--card-border); background: #fff; border-radius: 12px; padding: 7px 11px; cursor: pointer; font-weight: 700;
+  font-size: 0.9em; text-align: left; transition: background .2s, border-color .2s; }
+.chip:hover { border-color: var(--accent); }
+.chip.sel { background: var(--accent); color: #fff; border-color: var(--accent); }
+.chip.done { background: #e3f6ec; border-color: var(--ok); color: #1d6b48; cursor: default; }
+.chip.nope { border-color: var(--warn); }
+.match-grid { display: grid; grid-template-columns: 1fr 1.4fr; gap: 8px; }
+.match-grid .col { display: grid; gap: 8px; align-content: start; }
+.feedback { margin-top: 10px; min-height: 1.5em; font-weight: 700; }
+.feedback.ok { color: var(--ok); } .feedback.no { color: var(--warn); }
+.order-list { list-style: none; padding: 0; margin: 0 0 10px; display: grid; gap: 6px; }
+.order-list li { display: flex; align-items: center; gap: 8px; background: #fff; border: 1.5px solid var(--card-border); border-radius: 12px; padding: 6px 8px; }
+.order-list li span { flex: 1; font-weight: 700; }
+.icon-btn { border: none; background: var(--accent-soft); border-radius: 8px; width: 32px; height: 32px; cursor: pointer; font-weight: 800; }
+.checks { display: grid; gap: 6px; margin: 8px 0 10px; }
+.checks label { display: flex; gap: 8px; align-items: center; cursor: pointer; }
+.checks input { width: 18px; height: 18px; accent-color: var(--accent); }
+textarea.reflect { width: 100%; min-height: 64px; border-radius: 12px; border: 1.5px solid var(--card-border); padding: 8px 10px; resize: vertical; }
+.flip-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+.flip { perspective: 600px; border: none; background: none; padding: 0; cursor: pointer; height: 92px; }
+.flip .inner { position: relative; width: 100%; height: 100%; transition: transform .6s; transform-style: preserve-3d; }
+body.low-stim .flip .inner { transition: none; }
+.flip.flipped .inner { transform: rotateY(180deg); }
+.flip .face { position: absolute; inset: 0; backface-visibility: hidden; border-radius: 12px; display: grid; place-items: center; padding: 6px;
+  font-weight: 800; font-size: 0.86em; text-align: center; border: 1.5px solid var(--card-border); }
+.flip .front { background: linear-gradient(135deg, #fff, var(--accent-soft)); }
+.flip .back { background: #fff; transform: rotateY(180deg); font-weight: 600; font-size: 0.78em; color: var(--ink-soft); }
+.flip.picked .face { border-color: var(--accent); box-shadow: 0 0 0 2px var(--accent); }
+select.helper { width: 100%; border-radius: 12px; border: 1.5px solid var(--card-border); padding: 8px 10px; background: #fff; }
+
+/* ---------- hint toast, skip menu, fallback ---------- */
+#hint { position: fixed; left: 50%; bottom: 22px; transform: translateX(-50%); z-index: 25; background: var(--card); border: 1px solid var(--card-border);
+  box-shadow: var(--shadow); border-radius: 999px; padding: 10px 10px 10px 20px; display: flex; gap: 12px; align-items: center; font-weight: 700;
+  max-width: calc(100vw - 32px); }
+#hint[hidden] { display: none; }
+#skipMenu { position: fixed; z-index: 40; inset: 0; background: rgba(35, 38, 58, 0.35); display: grid; place-items: center; padding: 16px; }
+#skipMenu[hidden] { display: none; }
+#skipMenu .box { background: #fff; border-radius: var(--radius); box-shadow: var(--shadow); padding: 20px; width: min(520px, 100%); max-height: 90vh; overflow-y: auto; }
+#skipMenu h2 { margin: 0 0 4px; }
+#skipMenu ul { list-style: none; padding: 0; margin: 14px 0; display: grid; gap: 8px; }
+#skipMenu li button { width: 100%; text-align: left; border: 1.5px solid var(--card-border); background: var(--accent-soft); border-radius: 14px;
+  padding: 10px 14px; cursor: pointer; font-weight: 800; }
+#skipMenu li button small { display: block; font-weight: 600; color: var(--ink-soft); }
+#fallback { position: fixed; inset: 0; display: grid; place-items: center; padding: 24px; text-align: center; z-index: 5; }
+#fallback[hidden] { display: none; }
+#fallback .box { background: var(--card); border-radius: var(--radius); padding: 24px; box-shadow: var(--shadow); max-width: 480px; }
+footer { position: fixed; left: 18px; bottom: 14px; z-index: 15; font-size: 0.78em; color: var(--ink-soft); font-weight: 700; opacity: .8; }
+
+/* ---------- phones / tablets: panel becomes a bottom sheet ---------- */
+@media (max-width: 760px) {
+  header { padding: 10px; }
+  .tools { border-radius: 18px; }
+  #panel { top: auto; left: 8px; right: 8px; bottom: 8px; width: auto; height: 56vh; transform: translateY(calc(100% + 20px)); }
+  #panel.open { transform: none; }
+  #hint { bottom: 12px; border-radius: 18px; }
+  footer { display: none; }
+  .vol input { width: 70px; }
+}
+</style>
+</head>
+<body>
+
+<!-- ===================== HEADER ===================== -->
+<header>
+  <div class="brand">
+    <h1>Pforzheim AI Course Islands</h1><span class="by">by Prof Luarn</span>
+  </div>
+  <div class="tools" role="toolbar" aria-label="Page settings">
+    <button class="pill-btn" id="musicBtn" aria-pressed="false" aria-label="Background music (currently off)">♪ Music: Off</button>
+    <label class="vol">Vol <input type="range" id="volume" min="0" max="100" value="40" aria-label="Music volume"></label>
+    <button class="pill-btn" id="lowStimBtn" aria-pressed="false">Low-stimulation mode</button>
+    <button class="pill-btn" id="skipBtn" aria-haspopup="dialog">Skip 3D view</button>
+  </div>
+</header>
+
+<!-- ===================== 3D SCENE + LABELS ===================== -->
+<main>
+  <div id="scene" aria-label="3D map with six course islands. Use the island buttons or the Skip 3D view menu." role="img"></div>
+  <nav id="labels" aria-label="Islands"></nav>
+</main>
+
+<!-- ===================== CONTENT PANEL ===================== -->
+<aside id="panel" role="dialog" aria-modal="false" aria-labelledby="panelTitle" aria-hidden="true">
+  <div class="panel-head">
+    <div class="panel-badge" id="panelBadge">A</div>
+    <div>
+      <div class="kicker" id="panelKicker">Island A · Unit 1</div>
+      <h2 id="panelTitle">Island</h2>
+    </div>
+  </div>
+  <div class="panel-body" id="panelBody"></div>
+  <div class="panel-foot">
+    <button class="btn ghost" id="prevBtn" aria-label="Previous island">← Prev</button>
+    <button class="btn" id="backBtn">Back to overview</button>
+    <button class="btn ghost" id="nextBtn" aria-label="Next island">Next →</button>
+  </div>
+</aside>
+
+<div id="hint" role="status">
+  <span>Drag to rotate, scroll to zoom, click an island to explore.</span>
+  <button class="btn" id="hintClose" aria-label="Dismiss hint">Got it</button>
+</div>
+
+<div id="skipMenu" role="dialog" aria-modal="true" aria-labelledby="skipTitle" hidden>
+  <div class="box">
+    <h2 id="skipTitle">All islands (text view)</h2>
+    <p style="margin:0;color:var(--ink-soft)">Pick an island to open its lessons and activity without using the 3D scene.</p>
+    <ul id="skipList"></ul>
+    <button class="btn ghost" id="skipClose">Close</button>
+  </div>
+</div>
+
+<div id="fallback" hidden>
+  <div class="box">
+    <h2>3D view is not available</h2>
+    <p>Your browser or device could not start WebGL, so the floating islands cannot be drawn. No problem – all course content is still here in the text view.</p>
+    <button class="btn" id="fallbackOpen">Open the island list</button>
+  </div>
+</div>
+
+<footer>Student build 321705 · made with Claude Code</footer>
+
+<script>
+/* =====================================================================
+   3. COURSE CONTENT  (edit island names, lessons and activities here)
+   ===================================================================== */
+const ISLANDS = [
+  { id: "A", unit: 1, title: "Getting Started with Perceptual AI", color: 0xffb3c7, rock: 0xd9b8a8, landmark: "camera",
+    intro: "Your first steps into AI that can see. You set up your own course page, meet Google MediaPipe and train a tiny model yourself. By the end, your computer recognises objects in images and videos.",
+    lessons: [
+      ["1.1 Build your own personal web page and course introduction", "Create the page where you will collect all your course work."],
+      ["1.2 Introduction to Google MediaPipe Tasks (perceptual AI)", "Meet a free toolkit of ready-made vision models."],
+      ["1.3 Train your own recognition model with Teachable Machine", "Teach a model new classes just by showing it examples."],
+      ["1.4 Image object recognition with Google Antigravity", "Let an AI coding assistant build an app that finds objects in photos."],
+      ["1.5 Video object recognition with Google Antigravity", "Do the same for moving pictures and videos."],
+    ], activity: "match" },
+  { id: "B", unit: 2, title: "MediaPipe Vision Tasks", color: 0xa8d8ff, rock: 0xb9b3d6, landmark: "face",
+    intro: "Here you go deeper into MediaPipe. Faces, bodies, hands and backgrounds each have their own model. You learn which task fits which problem.",
+    lessons: [
+      ["2.1 MediaPipe Face Landmark Detection", "Find hundreds of points on a face in a photo."],
+      ["2.2 MediaPipe Video Face Landmark Detection", "Track those face points live in a video or webcam."],
+      ["2.3 MediaPipe Pose Landmark Detection", "Follow the joints of a whole body, e.g. for fitness apps."],
+      ["2.4 MediaPipe Gesture Recognition", "Recognise hand signs like thumbs-up or open palm."],
+      ["2.5 MediaPipe Image Segmentation", "Separate a person from the background, pixel by pixel."],
+      ["2.6 MediaPipe Face Detection", "Quickly find where faces are in a picture."],
+    ], activity: "which" },
+  { id: "C", unit: 3, title: "Real-Time Models and Creative AI", color: 0xffe08a, rock: 0xd6c2a0, landmark: "easel",
+    intro: "Models that run in real time and models that create. You detect objects live, turn photos into paintings and talk to a large language model through an API.",
+    lessons: [
+      ["3.1 Teachable Machine Real-Time Object Classifier", "Use your own trained model live on the webcam."],
+      ["3.2 YOLO", "Detect many objects at once, fast enough for live video."],
+      ["3.3 Neural Style Transfer", "Repaint a photo in the style of a famous artwork."],
+      ["3.4 Simple Chat App Built with a Gemini API Key", "Build your own chat window that talks to Gemini."],
+      ["3.5 Island Builder", "Design an interactive 3D course map – like this one."],
+    ], activity: "order" },
+  { id: "D", unit: 4, title: "Gemini and Multimodal Workflows", color: 0xb5ecc8, rock: 0xa9c7b6, landmark: "star",
+    intro: "Multimodal means text, images and more in one model. You try a local model with Ollama and then explore the Gemini family of tools to build helpers for real tasks.",
+    lessons: [
+      ["4.1 Use a multimodal model to let Ollama recognize images", "Run a model on your own computer that understands pictures."],
+      ["4.2 Gemini", "Get to know Google's Gemini assistant."],
+      ["4.3 Gemini Notebook", "Explore working with your own sources in class."],
+      ["4.4 Gemini Canvas", "Explore a space for drafting documents and code together."],
+      ["4.5 Gemini Skills-1", "First look at reusable skills – explore in class."],
+      ["4.6 Gemini Skills-2", "Build on skills step by step – explore in class."],
+      ["4.7 Gemini Skills-3", "Combine skills into a workflow – explore in class."],
+    ], activity: "helper" },
+  { id: "E", unit: 5, title: "AI Agents", color: 0xd4c2ff, rock: 0xbfb2d9, landmark: "robot",
+    intro: "An agent does not just answer – it plans and takes steps to reach a goal. You compare different agent tools and think about which jobs you would hand over.",
+    lessons: [
+      ["5.1 n8n", "Connect apps into automated workflows."],
+      ["5.2 ChatGPT multi-agent", "See several AI helpers work together on one task."],
+      ["5.3 ChatGPT Skills", "Explore reusable skills in ChatGPT in class."],
+      ["5.4 ChatGPT Plugins - canva", "Explore connecting ChatGPT with Canva in class."],
+      ["5.5 ChatGPT Sites", "Explore building sites with ChatGPT in class."],
+      ["5.6 Claude Skills", "Explore skills for Claude in class."],
+      ["5.7 OpenClaw", "An agent tool to explore in class."],
+      ["5.8 Hermes Agent", "An agent tool to explore in class."],
+    ], activity: "sort" },
+  { id: "F", unit: 6, title: "The Next Wave of AI Tools", color: 0xffc9a3, rock: 0xd7b39c, landmark: "rocket",
+    intro: "The last island looks ahead. New AI tools appear every month – here you explore a selection together in class and decide what you want to try first.",
+    lessons: [
+      ["6.1 Meta Muse", "A new AI tool – explore in class."],
+      ["6.2 Manus Cue!", "A new AI tool – explore in class."],
+      ["6.3 Hark Pro", "A new AI tool – explore in class."],
+      ["6.4 OpenAI Dots", "A new AI tool – explore in class."],
+      ["6.5 Grok Bot", "A new AI tool – explore in class."],
+      ["6.6 Claude Duet", "A new AI tool – explore in class."],
+    ], activity: "explorer" },
+];
+
+/* =====================================================================
+   4. SETTINGS (remembered for this browser session)
+   ===================================================================== */
+const store = {
+  get(k, d) { try { const v = sessionStorage.getItem("ci_" + k); return v === null ? d : JSON.parse(v); } catch (_) { return d; } },
+  set(k, v) { try { sessionStorage.setItem("ci_" + k, JSON.stringify(v)); } catch (_) {} },
+};
+const prefersReduced = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+let lowStim = store.get("lowStim", prefersReduced);
+const $ = (id) => document.getElementById(id);
+const hex = (n) => "#" + n.toString(16).padStart(6, "0");
+const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+
+/* =====================================================================
+   5. 3D SCENE
+   ===================================================================== */
+let renderer, scene, camera, controls, islandObjs = [], ambientGroup, hovered = null, focusedIdx = -1, activeIdx = -1;
+let webglOK = false;
+const clock = { t: 0, last: performance.now() };
+const HOME = { pos: null, target: null };
+let fly = null; // current camera tween
+
+function webglAvailable() {
+  try { const c = document.createElement("canvas"); return !!(window.WebGLRenderingContext && (c.getContext("webgl") || c.getContext("experimental-webgl"))); }
+  catch (_) { return false; }
+}
+
+function initScene() {
+  if (!window.THREE || !THREE.OrbitControls || !webglAvailable()) return false;
+  const host = $("scene");
+  renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+  renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 1.75)); // cap for performance
+  renderer.setSize(innerWidth, innerHeight);
+  host.appendChild(renderer.domElement);
+
+  scene = new THREE.Scene();
+  scene.fog = new THREE.Fog(0xe9ddff, 30, 70);
+  camera = new THREE.PerspectiveCamera(45, innerWidth / innerHeight, 0.1, 200);
+  camera.position.set(0, 11, 23);
+  HOME.pos = camera.position.clone(); HOME.target = new THREE.Vector3(0, 0, 0);
+
+  controls = new THREE.OrbitControls(camera, renderer.domElement);
+  controls.enableDamping = true; controls.dampingFactor = 0.07;
+  controls.enablePan = false;
+  controls.minDistance = 6; controls.maxDistance = 34;      // keep users from getting lost
+  controls.minPolarAngle = 0.25; controls.maxPolarAngle = 1.45;
+  controls.rotateSpeed = 0.6; controls.zoomSpeed = 0.8;
+
+  // soft lighting, no shadows (cheap on laptops & phones)
+  scene.add(new THREE.HemisphereLight(0xfff6ff, 0xb8b0e0, 0.7));
+  const sun = new THREE.DirectionalLight(0xffffff, 0.75); sun.position.set(6, 12, 8); scene.add(sun);
+
+  buildAmbient();
+  const R = 9;
+  ISLANDS.forEach((d, i) => {
+    const a = (i / ISLANDS.length) * Math.PI * 2 - Math.PI / 2;
+    const g = buildIsland(d);
+    g.position.set(Math.cos(a) * R, (i % 2 ? 0.6 : -0.4), Math.sin(a) * R);
+    // turn each island so its landmark (built facing +z) looks outwards, towards the camera
+    Object.assign(g.userData, { idx: i, baseY: g.position.y, phase: i * 1.1, baseRot: Math.atan2(g.position.x, g.position.z) });
+    g.rotation.y = g.userData.baseRot;
+    scene.add(g);
+    islandObjs.push(g);
+  });
+  // a tiny pastel "sea" disc far below for depth
+  const sea = new THREE.Mesh(new THREE.CircleGeometry(26, 48), new THREE.MeshBasicMaterial({ color: 0xdfe8ff, transparent: true, opacity: 0.55 }));
+  sea.rotation.x = -Math.PI / 2; sea.position.y = -5; scene.add(sea);
+  ambientGroup.userData.sea = sea;
+  return true;
+}
+
+function mat(color, opts = {}) {
+  return new THREE.MeshStandardMaterial(Object.assign({ color, roughness: 0.85, metalness: 0, flatShading: true }, opts));
+}
+
+/* one island: rounded grassy top + rocky underside + landmark + glow ring */
+function buildIsland(d) {
+  const g = new THREE.Group();
+  const top = new THREE.Mesh(new THREE.SphereGeometry(2.2, 18, 10, 0, Math.PI * 2, 0, Math.PI / 2), mat(d.color));
+  top.scale.y = 0.38;
+  const under = new THREE.Mesh(new THREE.ConeGeometry(2.15, 2.6, 14), mat(d.rock));
+  under.rotation.x = Math.PI; under.position.y = -1.3;
+  const lid = new THREE.Mesh(new THREE.CircleGeometry(2.2, 18), mat(d.color));
+  lid.rotation.x = Math.PI / 2; // close the hemisphere bottom
+  g.add(top, under, lid);
+  // little bushes
+  for (let k = 0; k < 4; k++) {
+    const b = new THREE.Mesh(new THREE.IcosahedronGeometry(0.22 + Math.random() * 0.12, 0), mat(0x9fdcb0));
+    const a = k * 1.7 + 0.6; b.position.set(Math.cos(a) * 1.45, 0.42, Math.sin(a) * 1.45); g.add(b);
+  }
+  const lm = buildLandmark(d.landmark);
+  lm.position.y = 0.75; g.add(lm);
+  // soft highlight ring (only visible on hover / focus)
+  const ring = new THREE.Mesh(new THREE.TorusGeometry(2.55, 0.09, 8, 48),
+    new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0 }));
+  ring.rotation.x = Math.PI / 2; ring.position.y = 0.1; g.add(ring);
+  g.userData.ring = ring;
+  g.userData.mats = [];
+  g.traverse((o) => { if (o.isMesh && o !== ring) { o.userData.island = g; if (o.material.color) g.userData.mats.push({ m: o.material, base: o.material.color.clone() }); } });
+  return g;
+}
+
+/* landmarks built from simple shapes – low-poly and cute */
+function buildLandmark(kind) {
+  const g = new THREE.Group();
+  const white = mat(0xffffff), dark = mat(0x3a3f5c), pink = mat(0xff8fab), blue = mat(0x7aa7ff), yellow = mat(0xffd166), mint = mat(0x7ad9b0);
+  const add = (geo, m, x = 0, y = 0, z = 0) => { const o = new THREE.Mesh(geo, m); o.position.set(x, y, z); g.add(o); return o; };
+  if (kind === "camera") {             // A: tiny camera tower
+    add(new THREE.CylinderGeometry(0.12, 0.16, 1.6, 8), white, 0, 0.8, 0);
+    const body = add(new THREE.BoxGeometry(0.9, 0.55, 0.6), pink, 0, 1.85, 0);
+    add(new THREE.CylinderGeometry(0.2, 0.2, 0.25, 12), dark, 0, 1.85, 0.4).rotation.x = Math.PI / 2;
+    add(new THREE.SphereGeometry(0.08, 8, 6), yellow, 0.3, 2.15, 0);
+    body.rotation.y = 0.4;
+  } else if (kind === "face") {        // B: face-shaped hill
+    const hill = add(new THREE.SphereGeometry(0.95, 16, 10, 0, Math.PI * 2, 0, Math.PI / 2), blue, 0, 0, 0); hill.scale.y = 1.1;
+    add(new THREE.SphereGeometry(0.11, 8, 6), dark, -0.3, 0.6, 0.72);
+    add(new THREE.SphereGeometry(0.11, 8, 6), dark, 0.3, 0.6, 0.72);
+    const smile = add(new THREE.TorusGeometry(0.28, 0.05, 6, 16, Math.PI), dark, 0, 0.38, 0.86); smile.rotation.z = Math.PI;
+    add(new THREE.SphereGeometry(0.1, 8, 6), pink, -0.55, 0.38, 0.62); add(new THREE.SphereGeometry(0.1, 8, 6), pink, 0.55, 0.38, 0.62);
+  } else if (kind === "easel") {      // C: painter's easel + bounding box (style transfer & YOLO)
+    const legs = [[-0.35, 0.1], [0.35, 0.1], [0, -0.35]];
+    legs.forEach(([x, z]) => { const l = add(new THREE.CylinderGeometry(0.05, 0.05, 1.7, 6), mat(0xc49a6c), x, 0.8, z); l.rotation.x = z < 0 ? -0.25 : 0.12; });
+    add(new THREE.BoxGeometry(1.1, 0.8, 0.06), white, 0, 1.25, 0.2);
+    add(new THREE.SphereGeometry(0.16, 8, 6), pink, -0.25, 1.3, 0.25); add(new THREE.SphereGeometry(0.13, 8, 6), blue, 0.15, 1.15, 0.25);
+    add(new THREE.SphereGeometry(0.11, 8, 6), yellow, 0.3, 1.4, 0.25);
+    const frame = new THREE.LineSegments(new THREE.EdgesGeometry(new THREE.BoxGeometry(0.7, 0.7, 0.7)), new THREE.LineBasicMaterial({ color: 0x22c55e }));
+    frame.position.set(1.0, 0.35, -0.6); g.add(frame);
+    add(new THREE.SphereGeometry(0.22, 10, 8), mint, 1.0, 0.3, -0.6);
+  } else if (kind === "star") {       // D: multimodal sparkle star on a pedestal
+    add(new THREE.CylinderGeometry(0.35, 0.45, 0.5, 10), white, 0, 0.25, 0);
+    const s = add(new THREE.OctahedronGeometry(0.55, 0), mat(0x8fd3ff, { emissive: 0x2a4a7a, emissiveIntensity: 0.25 }), 0, 1.15, 0);
+    s.scale.set(0.7, 1.2, 0.7); g.userData.spin = s;
+    add(new THREE.OctahedronGeometry(0.16, 0), yellow, 0.6, 1.6, 0.1); add(new THREE.OctahedronGeometry(0.12, 0), pink, -0.55, 1.4, -0.1);
+  } else if (kind === "robot") {      // E: robot hut
+    add(new THREE.BoxGeometry(1.2, 0.9, 1.0), mat(0xb7a6ff), 0, 0.45, 0);
+    const roof = add(new THREE.ConeGeometry(0.95, 0.6, 4), pink, 0, 1.2, 0); roof.rotation.y = Math.PI / 4;
+    add(new THREE.BoxGeometry(0.34, 0.5, 0.05), dark, 0, 0.25, 0.52);
+    add(new THREE.SphereGeometry(0.11, 8, 6), mat(0x7af0ff, { emissive: 0x2aa0b0, emissiveIntensity: 0.4 }), -0.3, 0.65, 0.52);
+    add(new THREE.SphereGeometry(0.11, 8, 6), mat(0x7af0ff, { emissive: 0x2aa0b0, emissiveIntensity: 0.4 }), 0.3, 0.65, 0.52);
+    add(new THREE.CylinderGeometry(0.03, 0.03, 0.5, 6), dark, 0, 1.7, 0); add(new THREE.SphereGeometry(0.09, 8, 6), yellow, 0, 1.97, 0);
+  } else if (kind === "rocket") {     // F: little rocket – the next wave
+    add(new THREE.CylinderGeometry(0.32, 0.38, 1.3, 12), white, 0, 0.9, 0);
+    add(new THREE.ConeGeometry(0.32, 0.6, 12), pink, 0, 1.85, 0);
+    add(new THREE.SphereGeometry(0.13, 10, 8), blue, 0, 1.1, 0.31);
+    for (let k = 0; k < 3; k++) { const f = add(new THREE.BoxGeometry(0.06, 0.4, 0.35), yellow, 0, 0.35, 0); f.rotation.y = (k / 3) * Math.PI * 2; f.translateZ(0.38); }
+  }
+  return g;
+}
+
+/* faint drifting stars and soft clouds */
+function buildAmbient() {
+  ambientGroup = new THREE.Group(); scene.add(ambientGroup);
+  const n = 380, pos = new Float32Array(n * 3);
+  for (let i = 0; i < n; i++) {
+    const r = 40 + Math.random() * 25, th = Math.random() * Math.PI * 2, ph = Math.acos(2 * Math.random() - 1) * 0.55;
+    pos[i * 3] = r * Math.sin(ph) * Math.cos(th); pos[i * 3 + 1] = r * Math.cos(ph) - 8; pos[i * 3 + 2] = r * Math.sin(ph) * Math.sin(th);
+  }
+  const sg = new THREE.BufferGeometry(); sg.setAttribute("position", new THREE.BufferAttribute(pos, 3));
+  const stars = new THREE.Points(sg, new THREE.PointsMaterial({ color: 0xffffff, size: 0.35, transparent: true, opacity: 0.85, depthWrite: false }));
+  ambientGroup.add(stars);
+  const cloudMat = new THREE.MeshStandardMaterial({ color: 0xffffff, transparent: true, opacity: 0.55, roughness: 1, flatShading: true });
+  const clouds = new THREE.Group();
+  for (let c = 0; c < 7; c++) {
+    const cl = new THREE.Group();
+    for (let k = 0; k < 4; k++) {
+      const p = new THREE.Mesh(new THREE.IcosahedronGeometry(0.7 + Math.random() * 0.5, 1), cloudMat);
+      p.position.set(k * 0.8 - 1.2, Math.random() * 0.3, Math.random() * 0.4); p.scale.y = 0.6; cl.add(p);
+    }
+    const a = Math.random() * Math.PI * 2, r = 15 + Math.random() * 8;
+    cl.position.set(Math.cos(a) * r, 3 + Math.random() * 5, Math.sin(a) * r);
+    clouds.add(cl);
+  }
+  ambientGroup.add(clouds);
+  ambientGroup.userData = { stars, clouds };
+}
+
+/* ---------- picking (click vs drag) ---------- */
+let ray = null;
+function pickIsland(ev) {
+  const r = renderer.domElement.getBoundingClientRect();
+  const v = new THREE.Vector2(((ev.clientX - r.left) / r.width) * 2 - 1, -((ev.clientY - r.top) / r.height) * 2 + 1);
+  ray = ray || new THREE.Raycaster();
+  ray.setFromCamera(v, camera);
+  const hit = ray.intersectObjects(islandObjs, true)[0];
+  return hit ? hit.object.userData.island || null : null;
+}
+function wirePointer() {
+  const el = renderer.domElement; let down = null;
+  el.addEventListener("pointerdown", (e) => { down = { x: e.clientX, y: e.clientY }; hideHint(); });
+  el.addEventListener("pointerup", (e) => {
+    if (!down) return;
+    const moved = Math.hypot(e.clientX - down.x, e.clientY - down.y); down = null;
+    if (moved > 6) return; // that was a drag, not a click
+    const g = pickIsland(e);
+    if (g) openIsland(g.userData.idx); else if (activeIdx >= 0) closePanel();
+  });
+  el.addEventListener("pointermove", (e) => {
+    if (e.pointerType !== "mouse") return;
+    const g = pickIsland(e);
+    setHover(g ? g.userData.idx : -1);
+    el.style.cursor = g ? "pointer" : "grab";
+  });
+  el.addEventListener("pointerleave", () => setHover(-1));
+}
+function setHover(i) { hovered = i; }
+
+/* ---------- camera fly-to ---------- */
+const ease = (t) => (t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2);
+function flyTo(pos, target) {
+  if (!camera) return;
+  const dur = lowStim ? 0 : 1300;
+  if (dur === 0) { camera.position.copy(pos); controls.target.copy(target); controls.update(); fly = null; return; }
+  fly = { p0: camera.position.clone(), t0: controls.target.clone(), p1: pos.clone(), t1: target.clone(), start: performance.now(), dur };
+}
+function islandView(i) {
+  const g = islandObjs[i], p = g.position.clone();
+  const out = new THREE.Vector3(p.x, 0, p.z).normalize();
+  const target = new THREE.Vector3(p.x, g.userData.baseY + 0.8, p.z);
+  const pos = target.clone().add(out.multiplyScalar(11)).add(new THREE.Vector3(0, 4.8, 0));
+  return { pos, target };
+}
+
+/* shift the rendered image so the panel never covers the island */
+function updateViewOffset() {
+  if (!camera) return;
+  const w = innerWidth, h = innerHeight, open = activeIdx >= 0;
+  if (open && w > 760) camera.setViewOffset(w, h, Math.min(440, w * 0.92) / 2 + 8, 0, w, h);
+  else if (open) camera.setViewOffset(w, h, 0, h * 0.28, w, h);
+  else camera.clearViewOffset();
+  camera.updateProjectionMatrix();
+}
+
+/* ---------- animation loop ---------- */
+let tmpV = null;
+function animate(now) {
+  requestAnimationFrame(animate);
+  const dt = Math.min(0.05, (now - clock.last) / 1000); clock.last = now;
+  if (!lowStim) clock.t += dt;
+  const t = clock.t;
+
+  if (fly) {
+    const k = Math.min(1, (now - fly.start) / fly.dur), e = ease(k);
+    camera.position.lerpVectors(fly.p0, fly.p1, e); controls.target.lerpVectors(fly.t0, fly.t1, e);
+    if (k >= 1) fly = null;
+  }
+  islandObjs.forEach((g, i) => {
+    const u = g.userData;
+    g.position.y = lowStim ? u.baseY : u.baseY + Math.sin(t * 0.6 + u.phase) * 0.18;   // slow bobbing
+    g.rotation.y = u.baseRot + (lowStim ? 0 : Math.sin(t * 0.15 + u.phase) * 0.12);
+    const hot = i === hovered || i === focusedIdx || i === activeIdx;
+    const target = hot && !lowStim ? 0.75 : 0;
+    u.ring.material.opacity += (target - u.ring.material.opacity) * 0.08;               // soft fade, no flashing
+    u.ring.visible = u.ring.material.opacity > 0.01;
+    const s = hot ? 1.06 : 1; g.scale.x += (s - g.scale.x) * 0.1; g.scale.y = g.scale.z = g.scale.x;
+    if (g.children.length) { const spin = g.children.find((c) => c.userData && c.userData.spin); if (spin && !lowStim) spin.userData.spin.rotation.y = t * 0.4; }
+  });
+  if (!lowStim) {
+    ambientGroup.userData.stars.rotation.y = t * 0.006;
+    ambientGroup.userData.clouds.rotation.y = t * 0.012;
+  }
+  controls.update();
+  renderer.render(scene, camera);
+  placeLabels();
+}
+
+/* HTML labels follow their islands */
+function placeLabels() {
+  const w = innerWidth, h = innerHeight;
+  tmpV = tmpV || new THREE.Vector3();
+  islandObjs.forEach((g, i) => {
+    const el = labelEls[i];
+    tmpV.set(g.position.x, g.position.y + 2.6 * g.scale.y, g.position.z).project(camera);
+    const behind = tmpV.z > 1;
+    el.classList.toggle("hidden", behind);
+    el.style.transform = `translate(${(tmpV.x * 0.5 + 0.5) * w}px, ${(-tmpV.y * 0.5 + 0.5) * h}px) translate(-50%, -100%)`;
+    el.classList.toggle("hot", i === hovered || i === focusedIdx || i === activeIdx);
+  });
+}
+
+/* =====================================================================
+   6. LABELS, PANEL, KEYBOARD
+   ===================================================================== */
+const labelEls = [];
+function buildLabels() {
+  ISLANDS.forEach((d, i) => {
+    const b = document.createElement("button");
+    b.className = "island-label";
+    b.setAttribute("aria-label", `Island ${d.id}, Unit ${d.unit}: ${d.title}. Press Enter to explore.`);
+    b.innerHTML = `<span class="letter" style="background:${hex(darken(d.color))}">${d.id}</span><span>Island ${d.id}</span><span class="unit">Unit ${d.unit}</span>`;
+    b.addEventListener("click", () => openIsland(i));
+    b.addEventListener("focus", () => { focusedIdx = i; });
+    b.addEventListener("blur", () => { if (focusedIdx === i) focusedIdx = -1; });
+    $("labels").appendChild(b); labelEls.push(b);
+  });
+  // text-only list
+  $("skipList").innerHTML = ISLANDS.map((d, i) =>
+    `<li><button data-i="${i}">Island ${d.id} · Unit ${d.unit}: ${esc(d.title)}<small>${d.lessons.length} lessons + 1 activity</small></button></li>`).join("");
+  $("skipList").addEventListener("click", (e) => { const b = e.target.closest("button"); if (b) { closeSkip(); openIsland(+b.dataset.i); } });
+}
+function darken(c) { // pure JS so it also works when Three.js failed to load
+  const f = (v) => Math.round(v * 0.66);
+  return (f(c >> 16 & 255) << 16) | (f(c >> 8 & 255) << 8) | f(c & 255);
+}
+
+let lastFocus = null;
+function openIsland(i) {
+  hideHint();
+  if (activeIdx < 0) lastFocus = document.activeElement;
+  activeIdx = i;
+  const d = ISLANDS[i];
+  $("panelBadge").textContent = d.id; $("panelBadge").style.background = hex(darken(d.color));
+  $("panelKicker").textContent = `Island ${d.id} · Unit ${d.unit}`;
+  $("panelTitle").textContent = d.title;
+  $("panelBody").innerHTML = `
+    <p>${esc(d.intro)}</p>
+    <h3>Lessons</h3>
+    <ul class="lessons">${d.lessons.map(([t, s]) => `<li><b>${esc(t)}</b><span>${esc(s)}</span></li>`).join("")}</ul>
+    <h3>Try it: mini activity</h3>
+    <div class="activity" id="activity"></div>`;
+  ACTIVITIES[d.activity]($("activity"));
+  const p = $("panel"); p.classList.add("open"); p.setAttribute("aria-hidden", "false");
+  $("panelBody").scrollTop = 0;
+  if (webglOK) { updateViewOffset(); const v = islandView(i); flyTo(v.pos, v.target); }
+  setTimeout(() => $("backBtn").focus({ preventScroll: true }), lowStim ? 0 : 350);
+}
+function closePanel() {
+  if (activeIdx < 0) return;
+  const p = $("panel"); p.classList.remove("open"); p.setAttribute("aria-hidden", "true");
+  activeIdx = -1;
+  if (webglOK) { updateViewOffset(); flyTo(HOME.pos, HOME.target); }
+  if (lastFocus && document.contains(lastFocus)) lastFocus.focus({ preventScroll: true });
+}
+$("backBtn").addEventListener("click", closePanel);
+$("prevBtn").addEventListener("click", () => openIsland((activeIdx + ISLANDS.length - 1) % ISLANDS.length));
+$("nextBtn").addEventListener("click", () => openIsland((activeIdx + 1) % ISLANDS.length));
+
+function openSkip() { $("skipMenu").hidden = false; $("skipList").querySelector("button").focus(); }
+function closeSkip() { $("skipMenu").hidden = true; }
+$("skipBtn").addEventListener("click", openSkip);
+$("skipClose").addEventListener("click", closeSkip);
+$("skipMenu").addEventListener("click", (e) => { if (e.target.id === "skipMenu") closeSkip(); });
+$("fallbackOpen").addEventListener("click", openSkip);
+
+document.addEventListener("keydown", (e) => {
+  if (e.key === "Escape") {
+    if (!$("skipMenu").hidden) closeSkip(); else closePanel();
+  }
+});
+
+/* first-load hint */
+function hideHint() { if (!$("hint").hidden) { $("hint").hidden = true; store.set("hintSeen", true); } }
+$("hintClose").addEventListener("click", hideHint);
+if (store.get("hintSeen", false)) $("hint").hidden = true;
+
+/* =====================================================================
+   7. MINI ACTIVITIES (one per island)
+   ===================================================================== */
+const shuffle = (a) => { a = a.slice(); for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; };
+const say = (el, txt, ok) => { el.textContent = txt; el.className = "feedback " + (ok ? "ok" : "no"); };
+
+const ACTIVITIES = {
+  /* A: match the tool to the task (click a tool, then its task) */
+  match(box) {
+    const pairs = [
+      ["Personal web page", "Show who you are and collect your course work"],
+      ["MediaPipe", "Find face, hand or body points with ready-made models"],
+      ["Teachable Machine", "Train a classifier from your own example photos"],
+      ["Antigravity", "Ask an AI coding assistant to build the app for you"],
+    ];
+    box.innerHTML = `<p><b>Match the tool to the task.</b> Click a tool, then the task it fits.</p>
+      <div class="match-grid"><div class="col" id="mTools"></div><div class="col" id="mTasks"></div></div><div class="feedback" aria-live="polite"></div>`;
+    const fb = box.querySelector(".feedback"); let pick = null, done = 0;
+    pairs.forEach(([tool], i) => box.querySelector("#mTools").insertAdjacentHTML("beforeend", `<button class="chip" data-i="${i}">${esc(tool)}</button>`));
+    shuffle(pairs.map((p, i) => [p[1], i])).forEach(([task, i]) => box.querySelector("#mTasks").insertAdjacentHTML("beforeend", `<button class="chip" data-t="${i}">${esc(task)}</button>`));
+    box.addEventListener("click", (e) => {
+      const b = e.target.closest(".chip"); if (!b || b.classList.contains("done")) return;
+      if (b.dataset.i !== undefined) { box.querySelectorAll("[data-i]").forEach((x) => x.classList.remove("sel")); b.classList.add("sel"); pick = b; return; }
+      if (!pick) { say(fb, "First choose a tool on the left.", false); return; }
+      if (pick.dataset.i === b.dataset.t) {
+        pick.classList.replace("sel", "done"); b.classList.add("done"); pick = null; done++;
+        say(fb, done === pairs.length ? "All matched – great start! 🎉" : "Correct! Keep going.", true);
+      } else { say(fb, "Not quite – try another task for this tool.", false); }
+    });
+  },
+
+  /* B: which MediaPipe task would you use? */
+  which(box) {
+    const tasks = ["Face Landmarks", "Pose Landmarks", "Gesture Recognition", "Image Segmentation", "Face Detection"];
+    const qs = [
+      ["A fitness app counts your squats.", 1, "Pose landmarks follow your knees and hips."],
+      ["A video call blurs your messy room.", 3, "Segmentation separates you from the background."],
+      ["A slideshow moves on when you show a thumbs-up.", 2, "Gesture recognition knows hand signs."],
+      ["A filter puts glasses exactly on your eyes.", 0, "Face landmarks give precise eye points."],
+      ["A camera simply counts how many people look at a poster.", 4, "Face detection quickly finds every face."],
+    ];
+    let q = 0, score = 0;
+    const render = () => {
+      if (q >= qs.length) { box.innerHTML = `<p><b>Done!</b> You got ${score} of ${qs.length} right on the first try. 👏</p><button class="btn ghost" id="again">Play again</button>`;
+        box.querySelector("#again").onclick = () => { q = 0; score = 0; render(); }; return; }
+      const [s] = qs[q]; let first = true;
+      box.innerHTML = `<p><b>Which task would you use?</b> (${q + 1}/${qs.length})<br>${esc(s)}</p><div class="chips">${tasks.map((t, i) => `<button class="chip" data-i="${i}">${t}</button>`).join("")}</div><div class="feedback" aria-live="polite"></div>`;
+      const fb = box.querySelector(".feedback");
+      box.querySelectorAll(".chip").forEach((b) => b.onclick = () => {
+        if (+b.dataset.i === qs[q][1]) { if (first) score++; b.classList.add("done"); say(fb, "Yes! " + qs[q][2], true); q++; setTimeout(render, lowStim ? 900 : 1500); }
+        else { first = false; b.classList.add("nope"); say(fb, "Good guess, but think again – which body part matters here?", false); }
+      });
+    };
+    render();
+  },
+
+  /* C: put the pipeline steps in order */
+  order(box) {
+    const right = ["Input: a webcam frame", "Model: YOLO looks at the frame", "Output: boxes and labels on screen"];
+    let items = shuffle(right); if (items.join() === right.join()) items.reverse();
+    const render = (msg, ok) => {
+      box.innerHTML = `<p><b>Put the pipeline in order.</b> Use the arrows, then check.</p>
+        <ol class="order-list">${items.map((t, i) => `<li><span>${i + 1}. ${esc(t)}</span>
+          <button class="icon-btn" data-up="${i}" aria-label="Move ${esc(t)} up" ${i === 0 ? "disabled" : ""}>↑</button>
+          <button class="icon-btn" data-down="${i}" aria-label="Move ${esc(t)} down" ${i === items.length - 1 ? "disabled" : ""}>↓</button></li>`).join("")}</ol>
+        <button class="btn" id="check">Check order</button><div class="feedback" aria-live="polite"></div>`;
+      if (msg) say(box.querySelector(".feedback"), msg, ok);
+      box.querySelectorAll("[data-up]").forEach((b) => b.onclick = () => { const i = +b.dataset.up; [items[i - 1], items[i]] = [items[i], items[i - 1]]; render(); });
+      box.querySelectorAll("[data-down]").forEach((b) => b.onclick = () => { const i = +b.dataset.down; [items[i + 1], items[i]] = [items[i], items[i + 1]]; render(); });
+      box.querySelector("#check").onclick = () => items.join() === right.join()
+        ? render("Perfect: input → model → output. That is every app in Unit 3! ✨", true)
+        : render("Almost – what has to come first before a model can work?", false);
+    };
+    render();
+  },
+
+  /* D: design your own helper */
+  helper(box) {
+    const feats = { Notebook: "collects your sources", Canvas: "drafts the result with you", Skills: "repeats the same steps reliably",
+      Connectors: "reaches your other apps", "Scheduled Tasks": "runs automatically on a schedule" };
+    box.innerHTML = `<p><b>Design your own helper.</b> Pick a goal and the Gemini features you would combine.</p>
+      <label class="sr-only" for="goal">Goal</label>
+      <select class="helper" id="goal"><option>Prepare for my exam</option><option>Write a weekly team update</option>
+        <option>Plan a group project</option><option>Keep track of AI news</option></select>
+      <div class="checks">${Object.keys(feats).map((f) => `<label><input type="checkbox" value="${f}"> ${f}</label>`).join("")}</div>
+      <button class="btn" id="mk">Show my helper</button><div class="feedback" aria-live="polite"></div>`;
+    box.querySelector("#mk").onclick = () => {
+      const goal = box.querySelector("#goal").value, picked = [...box.querySelectorAll("input:checked")].map((c) => c.value);
+      const fb = box.querySelector(".feedback");
+      if (!picked.length) return say(fb, "Tick at least one feature to build your helper.", false);
+      say(fb, `Your helper for “${goal}” ${picked.map((p) => feats[p]).join(", ")}. Nice combo – try it out in Unit 4!`, true);
+    };
+  },
+
+  /* E: agent or chatbot? + reflection */
+  sort(box) {
+    const cards = shuffle([
+      ["Answers one question about a lesson", "Chatbot"], ["Books a room, emails the team and updates the calendar", "Agent"],
+      ["Explains a word in simple language", "Chatbot"], ["Checks a website every morning and sends you a summary", "Agent"],
+      ["Rewrites a sentence more politely", "Chatbot"], ["Collects data, makes a chart and posts it to a channel", "Agent"],
+    ]);
+    let n = 0, ok = 0;
+    const render = () => {
+      if (n >= cards.length) {
+        box.innerHTML = `<p><b>${ok} / ${cards.length} sorted correctly.</b> Agents plan and take several steps; chatbots mostly answer.</p>
+          <label for="refl"><b>Reflect:</b> What task would you hand to an agent?</label>
+          <textarea class="reflect" id="refl" placeholder="e.g. Collect all deadlines from my course pages…"></textarea>
+          <button class="btn" id="saveRefl" style="margin-top:8px">Save my answer</button><div class="feedback" aria-live="polite"></div>`;
+        box.querySelector("#saveRefl").onclick = () => { const v = box.querySelector("#refl").value.trim();
+          say(box.querySelector(".feedback"), v ? `Saved for this session: “${v}”` : "Write one sentence first.", !!v); if (v) store.set("reflection", v); };
+        box.querySelector("#refl").value = store.get("reflection", "");
+        return;
+      }
+      box.innerHTML = `<p><b>Agent or chatbot?</b> (${n + 1}/${cards.length})</p><p style="font-size:1.05em">“${esc(cards[n][0])}”</p>
+        <div class="chips"><button class="chip" data-v="Agent">🤖 Agent</button><button class="chip" data-v="Chatbot">💬 Chatbot</button></div><div class="feedback" aria-live="polite"></div>`;
+      box.querySelectorAll(".chip").forEach((b) => b.onclick = () => {
+        const right = b.dataset.v === cards[n][1]; if (right) ok++;
+        say(box.querySelector(".feedback"), right ? "Right!" : `This one is more of a ${cards[n][1].toLowerCase()}.`, right);
+        box.querySelectorAll(".chip").forEach((c) => (c.disabled = true));
+        n++; setTimeout(render, lowStim ? 700 : 1200);
+      });
+    };
+    render();
+  },
+
+  /* F: tool explorer card flip (neutral wording, no invented features) */
+  explorer(box) {
+    const tools = ISLANDS[5].lessons.map(([t]) => t.replace(/^6\.\d\s+/, ""));
+    let picked = [];
+    box.innerHTML = `<p><b>Tool explorer.</b> Flip cards and pick two tools to compare.</p>
+      <div class="flip-grid">${tools.map((t, i) => `<button class="flip" data-i="${i}" aria-label="${esc(t)} card. Flip to pick.">
+        <div class="inner"><div class="face front">${esc(t)}</div><div class="face back">Explore in class.<br>Tap again to pick.</div></div></button>`).join("")}</div>
+      <p id="pickInfo" style="margin-top:10px">Picked: none yet</p>
+      <label for="first"><b>Which would you try first, and why?</b></label>
+      <textarea class="reflect" id="first" placeholder="One sentence…"></textarea>
+      <button class="btn" id="cmp" style="margin-top:8px">Save my comparison</button><div class="feedback" aria-live="polite"></div>`;
+    box.querySelectorAll(".flip").forEach((b) => b.onclick = () => {
+      const i = +b.dataset.i;
+      if (!b.classList.contains("flipped")) { b.classList.add("flipped"); return; }
+      if (picked.includes(i)) picked = picked.filter((x) => x !== i);
+      else { picked.push(i); if (picked.length > 2) picked.shift(); }
+      box.querySelectorAll(".flip").forEach((c) => c.classList.toggle("picked", picked.includes(+c.dataset.i)));
+      box.querySelector("#pickInfo").textContent = "Picked: " + (picked.length ? picked.map((x) => tools[x]).join(" vs. ") : "none yet");
+    });
+    box.querySelector("#cmp").onclick = () => {
+      const s = box.querySelector("#first").value.trim(), fb = box.querySelector(".feedback");
+      if (picked.length < 2) return say(fb, "Pick two tools first (flip a card, then tap it again).", false);
+      if (!s) return say(fb, "Write one sentence about what you would try first.", false);
+      say(fb, `${tools[picked[0]]} vs. ${tools[picked[1]]}: “${s}” – bring this idea to class!`, true);
+    };
+  },
+};
+
+/* =====================================================================
+   8. GENTLE AMBIENT MUSIC (Web Audio API, no files)
+   ===================================================================== */
+const music = { ctx: null, master: null, on: false, timers: [] };
+const PENTA = [261.63, 293.66, 329.63, 392.0, 440.0, 523.25, 587.33]; // C major pentatonic
+const CHORDS = [[130.81, 196.0, 329.63], [110.0, 164.81, 261.63], [146.83, 220.0, 349.23], [98.0, 146.83, 246.94]];
+function audioInit() {
+  const AC = window.AudioContext || window.webkitAudioContext; if (!AC) return false;
+  music.ctx = new AC();
+  music.master = music.ctx.createGain(); music.master.gain.value = 0;
+  // simple echo for a soft, spacious sound
+  const delay = music.ctx.createDelay(); delay.delayTime.value = 0.45;
+  const fbk = music.ctx.createGain(); fbk.gain.value = 0.35;
+  const lp = music.ctx.createBiquadFilter(); lp.type = "lowpass"; lp.frequency.value = 1800;
+  music.bus = music.ctx.createGain();
+  music.bus.connect(lp); lp.connect(music.master); lp.connect(delay); delay.connect(fbk); fbk.connect(delay); delay.connect(music.master);
+  music.master.connect(music.ctx.destination);
+  return true;
+}
+function tone(freq, start, dur, vol, type = "sine") {
+  const c = music.ctx, o = c.createOscillator(), g = c.createGain();
+  o.type = type; o.frequency.value = freq;
+  g.gain.setValueAtTime(0, start); g.gain.linearRampToValueAtTime(vol, start + dur * 0.35); g.gain.linearRampToValueAtTime(0, start + dur);
+  o.connect(g); g.connect(music.bus); o.start(start); o.stop(start + dur + 0.1);
+}
+function scheduleMusic() {
+  let bar = 0;
+  const pad = () => {                                   // slow pad chord every 8 s
+    const t = music.ctx.currentTime + 0.05, ch = CHORDS[bar++ % CHORDS.length];
+    ch.forEach((f) => { tone(f, t, 8.6, 0.05, "triangle"); tone(f * 1.003, t, 8.6, 0.03, "sine"); });
+  };
+  const note = () => {                                  // sparse pentatonic melody
+    const t = music.ctx.currentTime + 0.05;
+    tone(PENTA[Math.floor(Math.random() * PENTA.length)], t, 2.6, 0.045, "sine");
+    music.timers.push(setTimeout(note, 1400 + Math.random() * 2200));
+  };
+  pad(); music.timers.push(setInterval(pad, 8000)); music.timers.push(setTimeout(note, 1500));
+}
+function setMusic(on) {
+  if (on && lowStim) return;
+  if (on && !music.ctx && !audioInit()) { $("musicBtn").textContent = "♪ Music unavailable"; return; }
+  music.on = on;
+  const btn = $("musicBtn");
+  btn.setAttribute("aria-pressed", String(on)); btn.textContent = on ? "♪ Music: On" : "♪ Music: Off";
+  btn.setAttribute("aria-label", `Background music (currently ${on ? "on" : "off"})`);
+  store.set("music", on);
+  if (!music.ctx) return;
+  const now = music.ctx.currentTime;
+  music.master.gain.cancelScheduledValues(now);
+  if (on) {
+    music.ctx.resume(); scheduleMusic();
+    music.master.gain.setValueAtTime(music.master.gain.value, now);
+    music.master.gain.linearRampToValueAtTime($("volume").value / 100, now + 2);   // gentle fade in
+  } else {
+    music.timers.forEach((t) => { clearTimeout(t); clearInterval(t); }); music.timers = [];
+    music.master.gain.setValueAtTime(music.master.gain.value, now); music.master.gain.linearRampToValueAtTime(0, now + 0.8);
+  }
+}
+$("musicBtn").addEventListener("click", () => setMusic(!music.on));
+$("volume").value = store.get("volume", 40);
+$("volume").addEventListener("input", (e) => {
+  store.set("volume", +e.target.value);
+  if (music.ctx && music.on) music.master.gain.setTargetAtTime(e.target.value / 100, music.ctx.currentTime, 0.1);
+});
+// if music was on earlier in this session, resume it on the first user gesture (autoplay rules)
+if (store.get("music", false)) {
+  const resume = () => { if (!music.on && !lowStim) setMusic(true); };
+  window.addEventListener("pointerdown", resume, { once: true }); window.addEventListener("keydown", resume, { once: true });
+}
+
+/* =====================================================================
+   9. LOW-STIMULATION MODE
+   ===================================================================== */
+function applyLowStim(on) {
+  lowStim = on; store.set("lowStim", on);
+  document.body.classList.toggle("low-stim", on);
+  const b = $("lowStimBtn"); b.setAttribute("aria-pressed", String(on)); b.textContent = on ? "Low-stimulation mode: On" : "Low-stimulation mode";
+  if (on && music.on) setMusic(false);
+  $("musicBtn").disabled = on; $("volume").disabled = on;
+  if (!webglOK) return;
+  ambientGroup.visible = !on;                                   // no stars, clouds or sea
+  ambientGroup.userData.sea.visible = !on;
+  scene.fog.color.set(on ? 0xeef0f3 : 0xe9ddff);
+  islandObjs.forEach((g) => g.userData.mats.forEach(({ m, base }) => {   // calmer, less saturated colours
+    const c = base.clone(); if (on) { const hsl = {}; c.getHSL(hsl); c.setHSL(hsl.h, hsl.s * 0.35, Math.min(0.85, hsl.l + 0.05)); } m.color.copy(c);
+  }));
+  if (on) { fly = null; controls.enableDamping = false; } else controls.enableDamping = true;
+}
+$("lowStimBtn").addEventListener("click", () => applyLowStim(!lowStim));
+
+/* =====================================================================
+   10. START
+   ===================================================================== */
+window.addEventListener("resize", () => {
+  if (!webglOK) return;
+  camera.aspect = innerWidth / innerHeight; renderer.setSize(innerWidth, innerHeight); updateViewOffset();
+});
+try { webglOK = initScene(); } catch (e) { console.warn("3D init failed", e); webglOK = false; }
+buildLabels();
+if (webglOK) {
+  wirePointer();
+  requestAnimationFrame((t) => { clock.last = t; animate(t); });
+} else {
+  $("fallback").hidden = false; $("labels").hidden = true; $("hint").hidden = true;
+}
+applyLowStim(lowStim);
+// deep links: course_island.html#island-C opens Island C directly
+const deep = /^#island-([A-F])$/i.exec(location.hash);
+if (deep) openIsland(ISLANDS.findIndex((d) => d.id === deep[1].toUpperCase()));
+</script>
+</body>
+</html>
