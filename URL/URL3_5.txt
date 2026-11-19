@@ -1,0 +1,2 @@
+Claude Code: Pforzheim AI Course Islands - single-file Three.js page with 6 floating islands (Units 1-6), fly-to camera, lesson panels with mini activities, Web Audio music, low-stimulation mode, text-only view and an optional City mode design
+https://meidli00.github.io/course_island_321705.html
