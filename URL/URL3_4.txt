@@ -1,0 +1,2 @@
+Claude Code: Simple Chat App in the Flask web app - Google Gemini API (gemini-3.5-flash-lite) with streaming answers, model picker, system instructions and temperature; the API key stays on the server in .env
+https://aistudio.google.com/
