@@ -1,0 +1,2 @@
+ChatGPT multi-agent scheduled task: daily 7:30 AM, three subagents search AI-agent news of the past 7 days -> interactive HTML "AI Agent Daily Info Dashboard" (manual first run: 14 items in 3 sections)
+https://chatgpt.com/scheduled
