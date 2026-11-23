@@ -1,0 +1,2 @@
+n8n: first simple AI Agent (workflow unit5.1) - public chat trigger, AI Agent with Gemini 3.1 Flash-Lite, Simple Memory, SerpAPI web search and {{ $now }} in the system prompt
+https://meidling.app.n8n.cloud/webhook/5b1c2d3e-4f50-4a61-8b72-9c83d4e5f601/chat
