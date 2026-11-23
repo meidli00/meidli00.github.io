@@ -1,0 +1,2 @@
+ChatGPT Skills: newAgent.zip installed as skill "Venture" (/venture) - six subagents (research, strategy, copy, developer, QA, review) planned a smart storage system launch in Germany
+https://chatgpt.com/skills
