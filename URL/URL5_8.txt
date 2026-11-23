@@ -1,0 +1,2 @@
+Hermes Agent running on instabox.sh: free machine "hermes" (4 vCPU / 8 GB), installed with the one-line installer, hermes --version + hermes -z test, interactive chat (19 tools)
+https://dashboard.instabox.sh/dashboard/machines
