@@ -1,0 +1,2 @@
+ChatGPT Sites: single-page registration website for the "AI in Practice Lunchtime Workshop" (Fri, Nov 27, 2026), built and published as a public ChatGPT Site
+https://ai-in-practice-lunchtime-workshop.tuneddormouse32.chatgpt.site/
