@@ -1,0 +1,2 @@
+Manus Cue: Hermes Agent installed on the Cue cloud computer and connected to OpenAI Codex via OAuth (hermes -z test + hermes dashboard), multi-agent group "Pforzheim MBA Case Lab" (PF-Market / PF-Finance / PF-Strategy Analyst) discussing a US market entry case, and my own skill "weekly-report" (sales CSV -> week-over-week dashboard with charts + email draft)
+https://cue.im/
