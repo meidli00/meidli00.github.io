@@ -1,0 +1,2 @@
+Extra Credit 5.9: Claude Artifacts - "GreatWaveVoyage", a playable WebGL2 3D scene in the style of Hokusai's The Great Wave off Kanagawa, built only from ~960k woodblock-print brush strokes (Rapier physics, autopilot, camera tour, golden fish to collect)
+https://meidli00.github.io/GreatWaveVoyage.html

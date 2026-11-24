@@ -31,6 +31,8 @@ unit5_5:ChatGPT Sites
 unit5_6:Claude Skills
 unit5_7:OpenClaw
 unit5_8:Hermes
+unit5_9:Claude Artifacts
+unit5_10:Website Chatbot
 unit6_1:Meta Muse
 unit6_2:CUE!
 unit6_3:Hark Pro

@@ -1,0 +1,2 @@
+Extra Credit 5.10: n8n AI chatbot on my website (Webhook -> AI Agent with Gemini, memory and SerpAPI web search -> Respond to Webhook). Click the chat bubble at the bottom right to try it.
+https://meidli00.github.io/
